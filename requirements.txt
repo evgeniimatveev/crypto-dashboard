@@ -1,0 +1,6 @@
+httpx
+pandas
+duckdb
+huggingface-hub
+streamlit
+plotly
