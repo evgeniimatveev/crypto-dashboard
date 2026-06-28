@@ -1,0 +1,38 @@
+name: crypto-pipeline
+
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+    inputs:
+      health_check:
+        description: "Health check only"
+        required: false
+        default: "false"
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Download DB from HF
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_DATASET_REPO: evgeniimatveevusa/crypto-db
+        run: python scripts/download_db.py
+      - name: Run pipeline
+        env:
+          HEALTH_CHECK: ${{ github.event.inputs.health_check || 'false' }}
+        run: python run_pipeline.py
+      - name: Upload DB to HF
+        if: ${{ github.event.inputs.health_check != 'true' }}
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_DATASET_REPO: evgeniimatveevusa/crypto-db
+        run: python scripts/upload_db.py
