@@ -295,7 +295,7 @@ with st.expander("🔍 Data Quality & Pipeline Audit", expanded=False):
                           "fail": "background-color:#d73027;color:white"}
                 return colors.get(str(val).lower(), "")
             st.dataframe(
-                df_quality.style.applymap(_style_status, subset=["status"]),
+                df_quality.style.map(_style_status, subset=["status"]),
                 use_container_width=True, hide_index=True,
             )
     with t2:
