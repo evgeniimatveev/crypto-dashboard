@@ -54,7 +54,9 @@ Alternative.me F&G API         →  30-day Fear & Greed history
 
 ---
 
-![Top 20 Coins — Live Prices](assets/coins_table.png)
+![Top 20 Coins — Live Prices (#1–10)](assets/coins_table.png)
+
+![Top 20 Coins — Live Prices (#11–20)](assets/coins_table_bottom.png)
 
 ---
 
@@ -64,7 +66,7 @@ GitHub Actions runs daily at 12:00 UTC: download DB → extract → validate →
 
 Each run writes a Job Summary with status, coins fetched, null count, and duration.
 
-![GitHub Actions — 3 runs green](assets/github_actions.png)
+![GitHub Actions — 4 green runs](assets/github_actions.png)
 
 QA thresholds: `pass` ≥ 20 coins · `warn` < 20 · `fail` < 10. Every run logged to `data_quality_log` table inside DuckDB.
 
