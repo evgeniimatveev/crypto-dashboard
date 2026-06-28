@@ -1,68 +1,94 @@
 # ₿ Crypto On-Chain Dashboard
 
-Interactive dashboard tracking the top 20 cryptocurrencies — prices, market sentiment, and liquidity — updated daily via GitHub Actions.
+Real-time cryptocurrency market intelligence — Top 20 coins · Fear & Greed sentiment · Daily pipeline · Live on Streamlit Cloud.
 
-**[Live Demo →](https://crypto-dashboard.streamlit.app)**
+**[Live Demo →](https://crypto-onchain-dashboard.streamlit.app)**
+
+---
+
+![Crypto On-Chain Dashboard](assets/hero_kpi.png)
 
 ---
 
 ## What's inside
 
-**20 coins** · **$2T+ market cap tracked** · **Fear & Greed sentiment** · **Daily automated refresh**
+**20 coins tracked** · **$2.15T total market cap** · **Fear & Greed: 18 (Extreme Fear)** · refreshed daily via GitHub Actions.
+
+Every metric pulled live from CoinGecko and the Alternative.me Fear & Greed API — no API keys required, no paid tier.
 
 ### Dashboard sections
 
 | Section | What it shows |
 |---|---|
-| KPI Cards | BTC & ETH prices, total market cap, BTC dominance, Fear & Greed |
-| Fear & Greed Gauge | Current index + 30-day sentiment history bar chart |
-| Top 20 Coins Table | Price, 24h/7d/30d changes, market cap, volume (color-coded) |
-| Market Cap Treemap | Visual share of each coin, colored by 24h performance |
-| 7-Day Change Heatmap | Winners vs losers at a glance |
-| Liquidity Chart | Volume-to-MarketCap ratio — most actively traded coins |
-| Pipeline Audit | Data quality log + run history |
+| KPI Cards | BTC · ETH · Total Market Cap · BTC Dominance · Fear & Greed |
+| Fear & Greed Gauge | Semicircular gauge — current sentiment in one glance |
+| 30-Day Sentiment | Daily bar chart colored red→green — spot the fear cycles |
+| Top 20 Coins Table | Price · 24h/7d/30d changes · Market Cap · Volume · Vol/MCap ratio |
+| Market Cap Treemap | BTC 61% · ETH 10% · Tether 9% — visual size comparison |
+| Price Heatmap (7d) | Ranked bar chart — who's pumping, who's bleeding |
+| Liquidity Ratio | Vol/MCap sorted — USDT and USDC dominate by turnover |
+| Pipeline Audit | Data quality log + pipeline run history (expandable) |
+
+---
+
+![Fear & Greed Index + 30-Day Sentiment History](assets/fear_greed.png)
 
 ---
 
 ## Tech stack
 
 ```
-CoinGecko API (free)          → prices, market cap, volume for top 20 coins
-Fear & Greed Index API (free) → daily sentiment score (0–100)
+CoinGecko API (free, no key)   →  Top 20 coins by market cap
+Alternative.me F&G API         →  30-day Fear & Greed history
         ↓
-    Python + pandas
+    Python + httpx              →  3-retry extract with backoff
+    pandas                      →  transform + deduplication
+    DuckDB 1.5.4                →  5-table analytical store
         ↓
-    DuckDB (5 tables)
+    HuggingFace Dataset         →  binary DB storage (crypto.duckdb)
+    GitHub Actions              →  daily pipeline at 12:00 UTC
         ↓
-    HuggingFace Dataset    ← binary DB storage
-        ↓
-    Streamlit Community Cloud
+    Streamlit + Plotly          →  7-section interactive dashboard
+    Streamlit Cloud             →  live deployment
 ```
 
-GitHub Actions refreshes data every day at 12:00 UTC.
+---
+
+![Top 20 Coins — Live Prices](assets/coins_table.png)
 
 ---
 
-## Engineered features
+## Pipeline
 
-| Feature | Description |
+GitHub Actions runs daily at 12:00 UTC: download DB → extract → validate → load → upload.
+
+Each run writes a Job Summary with status, coins fetched, null count, and duration.
+
+![GitHub Actions — 3 runs green](assets/github_actions.png)
+
+QA thresholds: `pass` ≥ 20 coins · `warn` < 20 · `fail` < 10. Every run logged to `data_quality_log` table inside DuckDB.
+
+![Data Quality Audit — pass](assets/audit_pass.png)
+
+---
+
+![Market Cap Treemap + 7d Heatmap](assets/treemap_heatmap.png)
+
+---
+
+![Liquidity — Volume / Market Cap Ratio](assets/liquidity.png)
+
+---
+
+## DuckDB tables (5)
+
+| Table | Contents |
 |---|---|
-| `volume_to_mcap_ratio` | Trading activity relative to size — liquidity proxy |
-| `market_cap_dominance_pct` | Coin's share of total market cap |
-| `price_change_pct_7d / 30d` | Medium-term trend via CoinGecko history |
-| `fear_greed_signal` | Extreme Fear / Fear / Neutral / Greed / Extreme Greed classification |
-
----
-
-## DuckDB schema (5 tables)
-
-| Table | Rows per run | Description |
-|---|---|---|
-| `crypto_prices` | 20 | Price, volume, changes per coin |
-| `market_summary` | 1 | Total market cap, BTC dominance |
-| `fear_greed` | 30 (dedup) | Daily Fear & Greed index history |
-| `data_quality_log` | 1 | QA pass/warn/fail per run |
-| `pipeline_runs` | 1 | Timing, row counts, status |
+| `crypto_prices` | One row per coin per run — price, volume, dominance, 7d/30d change |
+| `market_summary` | Global metrics — total market cap, BTC/ETH dominance, market cap change |
+| `fear_greed` | Daily Fear & Greed index — value, classification, timestamp |
+| `data_quality_log` | QA result per run — status, null count, issues |
+| `pipeline_runs` | Audit log — run_id, duration, coins fetched, rows inserted |
 
 ---
 
@@ -77,15 +103,18 @@ python run_pipeline.py
 streamlit run dashboard/app.py
 ```
 
----
-
-## Key findings (live)
-
-- **BTC dominance** fluctuates 50–60% — altcoin season visible when it drops below 50%
-- **Fear & Greed below 20** historically precedes market recoveries
-- **Stablecoin volume-to-mcap** ratios spike during market volatility
-- **Post-IPO companies** and large-cap coins show lower volatility than mid-caps
+No API keys needed. On first run `_ensure_db()` downloads the latest DB from HuggingFace automatically.
 
 ---
 
-*Data: [CoinGecko API](https://www.coingecko.com/en/api) · [Alternative.me Fear & Greed](https://alternative.me/crypto/fear-and-greed-index/) · Updated daily*
+## Key findings (June 2026)
+
+- **Extreme Fear persists** — F&G index held below 20 for most of June, signaling sustained risk-off sentiment
+- **BTC dominance at 55.8%** — altcoins losing ground relative to Bitcoin
+- **USDT leads liquidity** — Vol/MCap ratio 0.141, nearly 3× higher than USDC — stablecoin flight confirmed
+- **ETH down 22% in 30 days** — underperforming BTC (-18.5%) in the same window
+- **LAB token +253% in 30d** — outlier in an otherwise bearish market
+
+---
+
+*Data: [CoinGecko](https://www.coingecko.com/en/api) · [Fear & Greed Index](https://alternative.me/crypto/fear-and-greed-index/) · Refreshed daily via GitHub Actions*
