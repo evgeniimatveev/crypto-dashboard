@@ -35,6 +35,39 @@ Every metric pulled live from CoinGecko and the Alternative.me Fear & Greed API 
 
 ---
 
+## Architecture
+
+```
+┌──────────────────────────── GitHub Actions (daily 12:00 UTC) ─────────────────────────────┐
+│                                                                                            │
+│   CoinGecko /coins/markets ──┐                                                            │
+│   CoinGecko /global ─────────┼──► httpx (3× retry + backoff) ──► pandas transform        │
+│   Alternative.me F&G ────────┘                                          │                 │
+│                                                                          ▼                 │
+│                                                              DuckDB  (crypto.duckdb)       │
+│                                                       ┌──────────────────────────┐         │
+│                                                       │  crypto_prices           │         │
+│                                                       │  market_summary          │         │
+│                                                       │  fear_greed              │         │
+│                                                       │  data_quality_log        │         │
+│                                                       │  pipeline_runs           │         │
+│                                                       └────────────┬─────────────┘         │
+│                                                                    │                       │
+│                                               HuggingFace Dataset  (binary upload)        │
+└────────────────────────────────────────────────────────────────────────────────────────────┘
+                                                                    │
+                                           Streamlit Cloud  (hf_hub_download on cold start)
+                                                                    │
+                                    ┌───────────────────────────────▼──────────────────────┐
+                                    │  7-section dashboard                                  │
+                                    │  KPI row · F&G gauge · 30-day sentiment               │
+                                    │  Top 20 table · Treemap · 7d Heatmap                  │
+                                    │  Liquidity chart · Pipeline audit                     │
+                                    └──────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Tech stack
 
 ```
